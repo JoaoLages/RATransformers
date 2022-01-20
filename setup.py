@@ -9,12 +9,12 @@ long_description = (here / 'README.md').read_text(encoding='utf-8')
 # Arguments marked as "Required" below must be included for upload to PyPI.
 # Fields marked as "Optional" may be commented out.
 setup(
-    name='relational_transformers',
+    name='ratransformers',
     version='0.0.0',
     # description='A sample Python project',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/JoaoLages/relational-transformers',
+    url='https://github.com/JoaoLages/RATransformers',
     author='Joao Lages',
     author_email='joaop.glages@gmail.com',
 
