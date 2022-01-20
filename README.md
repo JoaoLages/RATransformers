@@ -1,4 +1,4 @@
-# RATransformers 🐀
+# RATransformers 🐭
 
 ⚠👷‍♀👷‍♂  This package is WIP. Currently we only support the T5 model. Feel free to contribute with PRs!️👷‍♂👷‍♀⚠
 
