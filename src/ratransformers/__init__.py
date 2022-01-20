@@ -39,9 +39,11 @@ class RATransformer:
             def run(*args, **kwargs):
                 if 'input_relations' in kwargs:
                     if self.input_relation_kinds:
+                        self.input_relation_kinds[0].cpu().detach()
                         self.input_relation_kinds.pop()
                     self.input_relation_kinds.append(kwargs['input_relations'])
                     del kwargs['input_relations']
+                torch.cuda.empty_cache()
                 return function(*args, **kwargs)
             return run
 
@@ -105,7 +107,9 @@ class RATransformer:
 
         # remove previous relational types
         if self.input_relation_kinds:
+            self.input_relation_kinds[0].cpu().detach()
             self.input_relation_kinds.pop()
+            torch.cuda.empty_cache()
 
         # add to global variable
         self.input_relation_kinds.append(
