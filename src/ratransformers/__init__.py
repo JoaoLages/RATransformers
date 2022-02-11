@@ -1,7 +1,7 @@
 __version__ = '0.0.0'
 
 from transformers import AutoTokenizer, AutoModel, AutoModelForSeq2SeqLM, AutoModelForCausalLM, \
-    PreTrainedTokenizer, PreTrainedModel, BatchEncoding, BartForSequenceClassification
+    PreTrainedTokenizer, PreTrainedModel, BatchEncoding, BartForSequenceClassification, BartTokenizerFast
 from typing import Any, Dict, Optional, List, Tuple
 from types import MethodType
 import torch.nn as nn
@@ -19,7 +19,10 @@ class RATransformer:
                  model_cls: Optional[PreTrainedTokenizer] = None):
 
         if tokenizer_cls is None:
-            tokenizer_cls = AutoTokenizer
+            if (alias_model_name or pretrained_model_name_or_path).startswith('tapas'):
+                tokenizer_cls = BartTokenizerFast
+            else:
+                tokenizer_cls = AutoTokenizer
 
         if model_cls is None:
             if (alias_model_name or pretrained_model_name_or_path).startswith('t5'):
