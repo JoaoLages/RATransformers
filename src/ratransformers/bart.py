@@ -86,6 +86,8 @@ class BartRelationalAttention(BartAttention):
         # r_t is [batch, seq_length, dim_per_head, seq_length]
         r_t = relation_k_embeds.transpose(-2, -1)
 
+        import ipdb; ipdb.set_trace()
+
         q_tr_t_matmul = torch.matmul(q_t, r_t) # [batch, seq_length, n_heads, seq_length]
         q_tr_tmatmul_t = q_tr_t_matmul.permute(0, 2, 1, 3) # [batch, n_heads, seq_length, seq_length]
 
