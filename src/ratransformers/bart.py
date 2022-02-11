@@ -91,8 +91,7 @@ class BartRelationalAttention(BartAttention):
 
         # Add to scores
         attn_weights += q_tr_tmatmul_t
-        import ipdb; ipdb.set_trace()
-        attn_weights = attn_weights.view(*proj_shape)
+        attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
         if attn_weights.size() != (bsz * self.num_heads, tgt_len, src_len):
             raise ValueError(
@@ -137,7 +136,7 @@ class BartRelationalAttention(BartAttention):
         # [batch, seq_length, n_heads, seq_length]
         w_tr_matmul = torch.matmul(w_t, relation_v_embeds)
 
-        attn_output += w_tr_matmul.permute(0, 2, 1, 3).view(*proj_shape)
+        attn_output += w_tr_matmul.permute(0, 2, 1, 3).view(bsz * self.num_heads, tgt_len, self.head_dim)
 
         if attn_output.size() != (bsz * self.num_heads, tgt_len, self.head_dim):
             raise ValueError(
