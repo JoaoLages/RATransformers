@@ -20,9 +20,9 @@ class RATransformer:
 
         pretrained_tokenizer_name_or_path = pretrained_model_name_or_path
         if tokenizer_cls is None:
-            if (alias_model_name or pretrained_model_name_or_path).startswith('tapas'):
+            if pretrained_model_name_or_path == "nielsr/tapex-large-finetuned-tabfact":
                 tokenizer_cls = BartTokenizerFast
-                pretrained_tokenizer_name_or_path = 'bart-large'
+                pretrained_tokenizer_name_or_path = 'nielsr/tapex-large'
 
             else:
                 tokenizer_cls = AutoTokenizer
