@@ -80,6 +80,7 @@ class BartRelationalAttention(BartAttention):
         attn_weights = torch.bmm(query_states, key_states.transpose(1, 2))
 
         # q_t is [batch, seq_length, n_heads, dim_per_head]
+        import ipdb; ipdb.set_trace()
         q_t = query_states.permute(0, 2, 1, 3)
 
         # r_t is [batch, seq_length, dim_per_head, seq_length]
