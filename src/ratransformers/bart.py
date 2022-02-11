@@ -72,15 +72,15 @@ class BartRelationalAttention(BartAttention):
             past_key_value = (key_states, value_states)
 
         proj_shape = (bsz * self.num_heads, -1, self.head_dim)
-        query_states = self._shape(query_states, tgt_len, bsz).view(*proj_shape)
-        key_states = key_states.view(*proj_shape)
-        value_states = value_states.view(*proj_shape)
+        query_states = self._shape(query_states, tgt_len, bsz)
+        src_len = key_states.size(2)
 
-        src_len = key_states.size(1)
-        attn_weights = torch.bmm(query_states, key_states.transpose(1, 2))
+        # compute scores
+        attn_weights = torch.matmul(
+            query_states, key_states.transpose(3, 2)
+        )  # equivalent of torch.einsum("bnqd,bnkd->bnqk", query_states, key_states), compatible with onnx op>9
 
         # q_t is [batch, seq_length, n_heads, dim_per_head]
-        import ipdb; ipdb.set_trace()
         q_t = query_states.permute(0, 2, 1, 3)
 
         # r_t is [batch, seq_length, dim_per_head, seq_length]
@@ -91,6 +91,7 @@ class BartRelationalAttention(BartAttention):
 
         # Add to scores
         attn_weights += q_tr_tmatmul_t
+        attn_weights = attn_weights.view(*proj_shape)
 
         if attn_weights.size() != (bsz * self.num_heads, tgt_len, src_len):
             raise ValueError(
@@ -127,15 +128,15 @@ class BartRelationalAttention(BartAttention):
 
         attn_probs = nn.functional.dropout(attn_weights, p=self.dropout, training=self.training)
 
-        attn_output = torch.bmm(attn_probs, value_states)
+        attn_output = torch.bmm(attn_probs, value_states.view(*proj_shape))
 
         # w_t is [batch, seq_length, n_heads, seq_length]
-        w_t = attn_output.permute(0, 2, 1, 3)
+        w_t = attn_output.view(bsz, self.num_heads, tgt_len, self.head_dim).permute(0, 2, 1, 3)
 
         # [batch, seq_length, n_heads, seq_length]
         w_tr_matmul = torch.matmul(w_t, relation_v_embeds)
 
-        attn_output += w_tr_matmul.permute(0, 2, 1, 3)
+        attn_output += w_tr_matmul.permute(0, 2, 1, 3).view(*proj_shape)
 
         if attn_output.size() != (bsz * self.num_heads, tgt_len, self.head_dim):
             raise ValueError(
