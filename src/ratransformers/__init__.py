@@ -59,6 +59,8 @@ class RATransformer:
                     self.input_relation_kinds.append(kwargs['input_relations'])
                     del kwargs['input_relations']
                 torch.cuda.empty_cache()
+                if 'offset_mapping' in kwargs:
+                    del kwargs['offset_mapping']
                 return function(*args, **kwargs)
             return run
 
