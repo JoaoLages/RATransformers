@@ -131,10 +131,9 @@ class BartRelationalAttention(BartAttention):
         attn_output = torch.bmm(attn_probs, value_states.view(*proj_shape))
 
         # w_t is [batch, seq_length, n_heads, seq_length]
-        w_t = attn_output.view(bsz, self.num_heads, tgt_len, self.head_dim).permute(0, 2, 1, 3)
+        w_t = attn_probs.view(bsz, self.num_heads, tgt_len, self.head_dim).permute(0, 2, 1, 3)
 
         # [batch, seq_length, n_heads, seq_length]
-        import ipdb; ipdb.set_trace()
         w_tr_matmul = torch.matmul(w_t, relation_v_embeds)
 
         attn_output += w_tr_matmul.permute(0, 2, 1, 3).view(bsz * self.num_heads, tgt_len, self.head_dim)
