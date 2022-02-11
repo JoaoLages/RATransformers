@@ -138,7 +138,7 @@ class RATransformer:
         if model_name.startswith('t5'):
             return module_name.startswith('encoder') and isinstance(module, T5Attention)
 
-        elif model_name.startswith('tapas'):
+        elif model_name == "nielsr/tapex-large-finetuned-tabfact" or model_name.startswith('bart'):
             return module_name.startswith('encoder') and isinstance(module, BartAttention)
 
         else:
