@@ -1,12 +1,14 @@
 __version__ = '0.0.0'
 
-from transformers import AutoTokenizer, AutoModel, AutoModelForSeq2SeqLM, AutoModelForCausalLM, \
-    PreTrainedTokenizer, PreTrainedModel, BatchEncoding, BartForSequenceClassification, BartTokenizerFast
+from transformers import AutoTokenizer, AutoModel, AutoModelForSeq2SeqLM, \
+    PreTrainedTokenizer, BatchEncoding, BartForSequenceClassification, BartTokenizerFast, \
+    AutoModelForTokenClassification
 from typing import Any, Dict, Optional, List, Tuple, Type
 from types import MethodType
 import torch.nn as nn
 from ratransformers.t5 import T5RelationalAttention, T5Attention
 from ratransformers.bart import BartRelationalAttention, BartAttention
+from ratransformers.bert import BertRelationalSelfAttention, BertSelfAttention
 import torch
 import functools
 import numpy as np
@@ -33,6 +35,9 @@ class RATransformer:
 
             elif pretrained_model_name_or_path == "nielsr/tapex-large-finetuned-tabfact":
                 model_cls = BartForSequenceClassification
+
+            elif pretrained_model_name_or_path == "dslim/bert-base-NER":
+                model_cls = AutoModelForTokenClassification
 
             else:
                 model_cls = AutoModel
@@ -138,10 +143,13 @@ class RATransformer:
     def _change_this_module(self, module_name: str, module: nn.Module, model_name: str) -> bool:
 
         if model_name.startswith('t5'):
-            return module_name.startswith('encoder') and isinstance(module, T5Attention)
+            return 'encoder' in module_name and isinstance(module, T5Attention)
+
+        if model_name.startswith('bert'):
+            return 'encoder' in module_name and isinstance(module, BertSelfAttention)
 
         elif model_name == "nielsr/tapex-large-finetuned-tabfact" or model_name.startswith('bart'):
-            return module_name.startswith('encoder') and isinstance(module, BartAttention)
+            return 'encoder' in module_name and isinstance(module, BartAttention)
 
         else:
             raise NotImplementedError(f"Could not find implementation for the model: '{model_name}'")
@@ -152,6 +160,9 @@ class RATransformer:
 
         elif type(attention_layer) == BartAttention:
             attention_layer.forward = MethodType(BartRelationalAttention.forward, attention_layer)
+
+        elif type(attention_layer) == BertAttention:
+            attention_layer.forward = MethodType(BertRelationalAttention.forward, attention_layer)
 
         else:
             raise NotImplementedError(f"Could not find implementation for the module: '{attention_layer}'")
