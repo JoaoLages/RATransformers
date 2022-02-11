@@ -91,6 +91,7 @@ class BartRelationalAttention(BartAttention):
 
         # Add to scores
         attn_weights += q_tr_tmatmul_t
+        import ipdb; ipdb.set_trace()
         attn_weights = attn_weights.view(*proj_shape)
 
         if attn_weights.size() != (bsz * self.num_heads, tgt_len, src_len):
