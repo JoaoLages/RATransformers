@@ -8,11 +8,11 @@ class BartRelationalAttention(BartAttention):
     def __init__(self, *args, num_relation_kinds: int, use_same_relation_kv_emb: bool = True, **kwargs):
         super().__init__(*args, **kwargs)
         self.num_relation_kinds = num_relation_kinds
-        self.relation_k_emb = nn.Embedding(num_relation_kinds + 1, self.head_dim // self.num_heads, padding_idx=0)
+        self.relation_k_emb = nn.Embedding(num_relation_kinds + 1, self.head_dim, padding_idx=0)
         if use_same_relation_kv_emb:
             self.relation_v_emb = self.relation_k_emb
         else:
-            self.relation_v_emb = nn.Embedding(num_relation_kinds + 1, self.head_dim // self.num_heads, padding_idx=0)
+            self.relation_v_emb = nn.Embedding(num_relation_kinds + 1, self.head_dim, padding_idx=0)
         self.input_relation_kinds = [] # will hold (batch, seq_length, seq_length, num_relation_kinds)
 
     def forward(
@@ -85,8 +85,6 @@ class BartRelationalAttention(BartAttention):
 
         # r_t is [batch, seq_length, dim_per_head, seq_length]
         r_t = relation_k_embeds.transpose(-2, -1)
-
-        import ipdb; ipdb.set_trace()
 
         q_tr_t_matmul = torch.matmul(q_t, r_t) # [batch, seq_length, n_heads, seq_length]
         q_tr_tmatmul_t = q_tr_t_matmul.permute(0, 2, 1, 3) # [batch, n_heads, seq_length, seq_length]

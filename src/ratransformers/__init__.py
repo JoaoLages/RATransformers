@@ -157,26 +157,23 @@ class RATransformer:
     def _change_attention_layer(self, attention_layer: nn.Module, num_relation_kinds: int, use_same_relation_kv_emb: bool = True) -> None:
         if type(attention_layer) == T5Attention:
             attention_layer.forward = MethodType(T5RelationalAttention.forward, attention_layer)
-            head_dim_arg = attention_layer.inner_dim
-            num_heads_arg = attention_layer.n_heads
+            relational_embedding_dim = attention_layer.inner_dim // attention_layer.n_heads
 
         elif type(attention_layer) == BartAttention:
             attention_layer.forward = MethodType(BartRelationalAttention.forward, attention_layer)
-            head_dim_arg = attention_layer.head_dim
-            num_heads_arg = attention_layer.num_heads
+            relational_embedding_dim = attention_layer.head_dim
 
         elif type(attention_layer) == BertSelfAttention:
             attention_layer.forward = MethodType(BertRelationalSelfAttention.forward, attention_layer)
-            head_dim_arg = attention_layer.attention_head_size
-            num_heads_arg = attention_layer.num_attention_heads
+            relational_embedding_dim = attention_layer.attention_head_size
 
         else:
             raise NotImplementedError(f"Could not find implementation for the module: '{attention_layer}'")
 
         attention_layer.num_relation_kinds = num_relation_kinds
-        attention_layer.relation_k_emb = nn.Embedding(num_relation_kinds + 1, head_dim_arg // num_heads_arg, padding_idx=0)
+        attention_layer.relation_k_emb = nn.Embedding(num_relation_kinds + 1, relational_embedding_dim, padding_idx=0)
         if use_same_relation_kv_emb:
             attention_layer.relation_v_emb = attention_layer.relation_k_emb
         else:
-            attention_layer.relation_v_emb = nn.Embedding(num_relation_kinds + 1, head_dim_arg // num_heads_arg, padding_idx=0)
+            attention_layer.relation_v_emb = nn.Embedding(num_relation_kinds + 1, relational_embedding_dim, padding_idx=0)
         attention_layer.input_relation_kinds = self.input_relation_kinds # will hold (batch, seq_length, seq_length, num_relation_kinds)
