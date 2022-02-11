@@ -2,7 +2,7 @@ __version__ = '0.0.0'
 
 from transformers import AutoTokenizer, AutoModel, AutoModelForSeq2SeqLM, AutoModelForCausalLM, \
     PreTrainedTokenizer, PreTrainedModel, BatchEncoding, BartForSequenceClassification, BartTokenizerFast
-from typing import Any, Dict, Optional, List, Tuple
+from typing import Any, Dict, Optional, List, Tuple, Type
 from types import MethodType
 import torch.nn as nn
 from ratransformers.t5 import T5RelationalAttention, T5Attention
@@ -15,24 +15,29 @@ import numpy as np
 class RATransformer:
 
     def __init__(self, pretrained_model_name_or_path: str, relation_kinds: List[str],
-                 alias_model_name: Optional[str] = '', tokenizer_cls: Optional[PreTrainedTokenizer] = None,
-                 model_cls: Optional[PreTrainedTokenizer] = None):
+                 alias_model_name: Optional[str] = '', tokenizer_cls: Optional[Type[PreTrainedTokenizer]] = None,
+                 model_cls: Optional[Type[PreTrainedTokenizer]] = None):
 
+        pretrained_tokenizer_name_or_path = pretrained_model_name_or_path
         if tokenizer_cls is None:
             if (alias_model_name or pretrained_model_name_or_path).startswith('tapas'):
                 tokenizer_cls = BartTokenizerFast
+                pretrained_tokenizer_name_or_path = 'nielsr/tapex-large'
+
             else:
                 tokenizer_cls = AutoTokenizer
 
         if model_cls is None:
             if (alias_model_name or pretrained_model_name_or_path).startswith('t5'):
                 model_cls = AutoModelForSeq2SeqLM
-            elif (alias_model_name or pretrained_model_name_or_path).startswith('tapas'):
+
+            elif pretrained_model_name_or_path == "nielsr/tapex-large-finetuned-tabfact":
                 model_cls = BartForSequenceClassification
+
             else:
                 model_cls = AutoModel
 
-        self.tokenizer = tokenizer_cls.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path)
+        self.tokenizer = tokenizer_cls.from_pretrained(pretrained_model_name_or_path=pretrained_tokenizer_name_or_path)
         self.model = model_cls.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path)
 
         self.relational_kind_to_index = {t: i + 1 for i, t in enumerate(relation_kinds)}
