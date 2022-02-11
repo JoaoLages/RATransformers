@@ -8,11 +8,11 @@ class BartRelationalAttention(BartAttention):
     def __init__(self, *args, num_relation_kinds: int, use_same_relation_kv_emb: bool = True, **kwargs):
         super().__init__(*args, **kwargs)
         self.num_relation_kinds = num_relation_kinds
-        self.relation_k_emb = nn.Embedding(num_relation_kinds + 1, self.inner_dim // self.n_heads, padding_idx=0)
+        self.relation_k_emb = nn.Embedding(num_relation_kinds + 1, self.head_dim // self.num_heads, padding_idx=0)
         if use_same_relation_kv_emb:
             self.relation_v_emb = self.relation_k_emb
         else:
-            self.relation_v_emb = nn.Embedding(num_relation_kinds + 1, self.inner_dim // self.n_heads, padding_idx=0)
+            self.relation_v_emb = nn.Embedding(num_relation_kinds + 1, self.head_dim // self.num_heads, padding_idx=0)
         self.input_relation_kinds = [] # will hold (batch, seq_length, seq_length, num_relation_kinds)
 
     def forward(
