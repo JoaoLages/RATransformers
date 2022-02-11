@@ -1,12 +1,12 @@
 __version__ = '0.0.0'
 
 from transformers import AutoTokenizer, AutoModel, AutoModelForSeq2SeqLM, AutoModelForCausalLM, \
-    PreTrainedTokenizer, PreTrainedModel, BatchEncoding
+    PreTrainedTokenizer, PreTrainedModel, BatchEncoding, BartTokenizer, BartForSequenceClassification
 from typing import Any, Dict, Optional, List, Tuple
 from types import MethodType
 import torch.nn as nn
-from transformers.models.t5.modeling_t5 import T5Attention
-from ratransformers.t5 import T5RelationalAttention
+from ratransformers.t5 import T5RelationalAttention, T5Attention
+from ratransformers.bart import BartRelationalAttention, BartAttention
 import torch
 import functools
 import numpy as np
@@ -15,14 +15,24 @@ import numpy as np
 class RATransformer:
 
     def __init__(self, pretrained_model_name_or_path: str, relation_kinds: List[str],
-                 alias_model_name: Optional[str] = ''):
+                 alias_model_name: Optional[str] = '', tokenizer_cls: Optional[PreTrainedTokenizer] = None,
+                 model_cls: Optional[PreTrainedTokenizer] = None):
 
-        if (alias_model_name or pretrained_model_name_or_path).startswith('t5'):
-            model_cls = AutoModelForSeq2SeqLM
-        else:
-            model_cls = AutoModel
+        if tokenizer_cls is None:
+            if (alias_model_name or pretrained_model_name_or_path).startswith('tapas'):
+                tokenizer_cls = BartTokenizer
+            else:
+                tokenizer_cls = AutoTokenizer
 
-        self.tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path)
+        if model_cls is None:
+            if (alias_model_name or pretrained_model_name_or_path).startswith('t5'):
+                model_cls = AutoModelForSeq2SeqLM
+            elif (alias_model_name or pretrained_model_name_or_path).startswith('tapas'):
+                model_cls = BartForSequenceClassification
+            else:
+                model_cls = AutoModel
+
+        self.tokenizer = tokenizer_cls.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path)
         self.model = model_cls.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path)
 
         self.relational_kind_to_index = {t: i + 1 for i, t in enumerate(relation_kinds)}
@@ -119,8 +129,12 @@ class RATransformer:
         return self.input_relation_kinds[0]
 
     def _change_this_module(self, module_name: str, module: nn.Module, model_name: str) -> bool:
+
         if model_name.startswith('t5'):
             return module_name.startswith('encoder') and isinstance(module, T5Attention)
+
+        elif model_name.startswith('tapas'):
+            return module_name.startswith('encoder') and isinstance(module, BartAttention)
 
         else:
             raise NotImplementedError(f"Could not find implementation for the model: '{model_name}'")
@@ -128,13 +142,17 @@ class RATransformer:
     def _change_attention_layer(self, attention_layer: nn.Module, num_relation_kinds: int, use_same_relation_kv_emb: bool = True) -> None:
         if type(attention_layer) == T5Attention:
             attention_layer.forward = MethodType(T5RelationalAttention.forward, attention_layer)
-            attention_layer.num_relation_kinds = num_relation_kinds
-            attention_layer.relation_k_emb = nn.Embedding(num_relation_kinds + 1, attention_layer.inner_dim // attention_layer.n_heads, padding_idx=0)
-            if use_same_relation_kv_emb:
-                attention_layer.relation_v_emb = attention_layer.relation_k_emb
-            else:
-                attention_layer.relation_v_emb = nn.Embedding(num_relation_kinds + 1, attention_layer.inner_dim // attention_layer.n_heads, padding_idx=0)
-            attention_layer.input_relation_kinds = self.input_relation_kinds # will hold (batch, seq_length, seq_length, num_relation_kinds)
+
+        elif type(attention_layer) == BartAttention:
+            attention_layer.forward = MethodType(BartRelationalAttention.forward, attention_layer)
 
         else:
             raise NotImplementedError(f"Could not find implementation for the module: '{attention_layer}'")
+
+        attention_layer.num_relation_kinds = num_relation_kinds
+        attention_layer.relation_k_emb = nn.Embedding(num_relation_kinds + 1, attention_layer.inner_dim // attention_layer.n_heads, padding_idx=0)
+        if use_same_relation_kv_emb:
+            attention_layer.relation_v_emb = attention_layer.relation_k_emb
+        else:
+            attention_layer.relation_v_emb = nn.Embedding(num_relation_kinds + 1, attention_layer.inner_dim // attention_layer.n_heads, padding_idx=0)
+        attention_layer.input_relation_kinds = self.input_relation_kinds # will hold (batch, seq_length, seq_length, num_relation_kinds)

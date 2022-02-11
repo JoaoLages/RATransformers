@@ -1,7 +1,6 @@
 from transformers.models.t5.modeling_t5 import T5Attention
 import torch.nn as nn
 import torch
-import torch.nn.functional as F
 
 
 class T5RelationalAttention(T5Attention):
