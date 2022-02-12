@@ -1,5 +1,7 @@
 __version__ = '0.0.0'
 
+import contextlib
+
 from transformers import AutoTokenizer, AutoModel, AutoModelForSeq2SeqLM, \
     PreTrainedTokenizer, BatchEncoding, BartForSequenceClassification, BartTokenizerFast, \
     AutoModelForTokenClassification
@@ -43,7 +45,11 @@ class RATransformer:
                 model_cls = AutoModel
 
         self.tokenizer = tokenizer_cls.from_pretrained(pretrained_model_name_or_path=pretrained_tokenizer_name_or_path)
+
+        from transformers.modeling_utils import logger
+        logger.disabled = True # disable logger
         self.model = model_cls.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path)
+        logger.disabled = False # enable logger
 
         self.relational_kind_to_index = {t: i + 1 for i, t in enumerate(relation_kinds)}
         self.input_relation_kinds: List[torch.Tensor] = [] # will be used to pass variable by reference to attention layers
@@ -53,6 +59,12 @@ class RATransformer:
             if self._change_this_module(module_name=module_name, module=module,
                                         model_name=alias_model_name or pretrained_model_name_or_path):
                 self._change_attention_layer(attention_layer=module, num_relation_kinds=len(relation_kinds))
+
+        # reload model weights
+        state_dict = torch.load('ra-tscholak/1zha5ono/pytorch_model.bin', map_location="cpu")
+        self.model, _, _, _ = self.model._load_state_dict_into_model(
+            self.model, state_dict, 'ra-tscholak/1zha5ono', _fast_init=True
+        )
 
         def model_prefix_function(function):
             @functools.wraps(function)
