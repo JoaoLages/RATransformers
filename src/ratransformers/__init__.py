@@ -1,7 +1,5 @@
 __version__ = '0.0.0'
 
-import contextlib
-
 from transformers import AutoTokenizer, AutoModel, AutoModelForSeq2SeqLM, \
     PreTrainedTokenizer, BatchEncoding, BartForSequenceClassification, BartTokenizerFast, \
     AutoModelForTokenClassification
@@ -14,6 +12,7 @@ from ratransformers.bert import BertRelationalSelfAttention, BertSelfAttention
 import torch
 import functools
 import numpy as np
+import os
 
 
 class RATransformer:
@@ -47,7 +46,8 @@ class RATransformer:
         self.tokenizer = tokenizer_cls.from_pretrained(pretrained_model_name_or_path=pretrained_tokenizer_name_or_path)
 
         from transformers.modeling_utils import logger
-        logger.disabled = True # disable logger
+        has_pretrained_rat_model = os.path.isfile(f'{pretrained_model_name_or_path}/pytorch_model.bin')
+        logger.disabled = has_pretrained_rat_model # disable logger, if hsa pretrained rat model
         self.model = model_cls.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path)
         logger.disabled = False # enable logger
 
@@ -60,11 +60,12 @@ class RATransformer:
                                         model_name=alias_model_name or pretrained_model_name_or_path):
                 self._change_attention_layer(attention_layer=module, num_relation_kinds=len(relation_kinds))
 
-        # reload model weights
-        state_dict = torch.load('ra-tscholak/1zha5ono/pytorch_model.bin', map_location="cpu")
-        self.model, _, _, _ = self.model._load_state_dict_into_model(
-            self.model, state_dict, 'ra-tscholak/1zha5ono', _fast_init=True
-        )
+        # reload model weights if they exist
+        if has_pretrained_rat_model:
+            state_dict = torch.load(f'{pretrained_model_name_or_path}/pytorch_model.bin', map_location="cpu")
+            self.model, _, _, _ = self.model._load_state_dict_into_model(
+                self.model, state_dict, pretrained_model_name_or_path, _fast_init=True
+            )
 
         def model_prefix_function(function):
             @functools.wraps(function)
