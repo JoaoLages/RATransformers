@@ -2,7 +2,7 @@ __version__ = '0.0.0'
 
 from transformers import AutoTokenizer, AutoModel, AutoModelForSeq2SeqLM, \
     PreTrainedTokenizer, BatchEncoding, BartForSequenceClassification, BartTokenizerFast, \
-    AutoModelForTokenClassification
+    AutoModelForTokenClassification, BertPreTrainedModel, BartPretrainedModel, T5PreTrainedModel
 from typing import Any, Dict, Optional, List, Tuple, Type
 from types import MethodType
 import torch.nn as nn
@@ -57,7 +57,7 @@ class RATransformer:
         # change attention layers with relational ones
         for module_name, module in self.model.named_modules():
             if self._change_this_module(module_name=module_name, module=module,
-                                        model_name=alias_model_name or pretrained_model_name_or_path):
+                                        model_name=pretrained_model_name_or_path):
                 self._change_attention_layer(attention_layer=module, num_relation_kinds=len(relation_kinds))
 
         # reload model weights if they exist
@@ -155,13 +155,13 @@ class RATransformer:
 
     def _change_this_module(self, module_name: str, module: nn.Module, model_name: str) -> bool:
 
-        if model_name.startswith('t5'):
+        if isinstance(self.model, T5PreTrainedModel):
             return 'encoder' in module_name and isinstance(module, T5Attention)
 
-        if model_name.startswith('bert'):
+        elif isinstance(self.model, BertPreTrainedModel):
             return 'encoder' in module_name and isinstance(module, BertSelfAttention)
 
-        elif model_name == "nielsr/tapex-large-finetuned-tabfact" or model_name.startswith('bart'):
+        elif isinstance(self.model, BartPretrainedModel):
             return 'encoder' in module_name and isinstance(module, BartAttention)
 
         else:
