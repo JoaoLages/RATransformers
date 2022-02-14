@@ -1,14 +1,16 @@
 __version__ = '0.0.0'
 
-from transformers import AutoTokenizer, AutoModel, AutoModelForSeq2SeqLM, \
-    PreTrainedTokenizer, BatchEncoding, BartForSequenceClassification, BartTokenizerFast, \
-    AutoModelForTokenClassification, BertPreTrainedModel, BartPretrainedModel, T5PreTrainedModel
-from typing import Any, Dict, Optional, List, Tuple, Type
+from transformers import AutoTokenizer, AutoModel, BertPreTrainedModel, BartPretrainedModel, T5PreTrainedModel, \
+     PreTrainedTokenizer, BatchEncoding, GPT2PreTrainedModel, PreTrainedModel
+from transformers.models.roberta.modeling_roberta import RobertaPreTrainedModel
+from typing import Dict, Optional, List, Tuple, Type
 from types import MethodType
 import torch.nn as nn
 from ratransformers.t5 import T5RelationalAttention, T5Attention
 from ratransformers.bart import BartRelationalAttention, BartAttention
 from ratransformers.bert import BertRelationalSelfAttention, BertSelfAttention
+from ratransformers.roberta import RobertaRelationalSelfAttention, RobertaSelfAttention
+from ratransformers.gpt2 import GPT2RelationalAttention, GPT2Attention
 import torch
 import functools
 import numpy as np
@@ -18,31 +20,21 @@ import os
 class RATransformer:
 
     def __init__(self, pretrained_model_name_or_path: str, relation_kinds: List[str],
-                 alias_model_name: Optional[str] = '', tokenizer_cls: Optional[Type[PreTrainedTokenizer]] = None,
-                 model_cls: Optional[Type[PreTrainedTokenizer]] = None):
+                 tokenizer_cls: Type[PreTrainedTokenizer] = AutoTokenizer,
+                 model_cls: Type[PreTrainedModel] = AutoModel,
+                 pretrained_tokenizer_name_or_path: Optional[str] = None):
+        """
+        Returns an initialized and ready to test/train RATransformer
+        Args:
+            pretrained_model_name_or_path: model name or path to pass directly to Huggingface's `model_cls` class
+            relation_kinds: list with all the possible relation kinds that can exist within the input
+            tokenizer_cls: pass your own AutoTokenizer class to initialize the tokenizer
+            model_cls: pass your own AutoModel class to initialize the model
+            pretrained_tokenizer_name_or_path: Optional. Tokenizer name or path to pass directly
+                to Huggingface's `tokenizer_cls` class. By default, will be equal to pretrained_model_name_or_path
+        """
 
-        pretrained_tokenizer_name_or_path = pretrained_model_name_or_path
-        if tokenizer_cls is None:
-            if pretrained_model_name_or_path == "nielsr/tapex-large-finetuned-tabfact":
-                tokenizer_cls = BartTokenizerFast
-                pretrained_tokenizer_name_or_path = 'facebook/bart-large'
-
-            else:
-                tokenizer_cls = AutoTokenizer
-
-        if model_cls is None:
-            if (alias_model_name or pretrained_model_name_or_path).startswith('t5'):
-                model_cls = AutoModelForSeq2SeqLM
-
-            elif pretrained_model_name_or_path == "nielsr/tapex-large-finetuned-tabfact":
-                model_cls = BartForSequenceClassification
-
-            elif pretrained_model_name_or_path == "dslim/bert-base-NER":
-                model_cls = AutoModelForTokenClassification
-
-            else:
-                model_cls = AutoModel
-
+        pretrained_tokenizer_name_or_path = pretrained_tokenizer_name_or_path or pretrained_model_name_or_path
         self.tokenizer = tokenizer_cls.from_pretrained(pretrained_model_name_or_path=pretrained_tokenizer_name_or_path)
 
         from transformers.modeling_utils import logger
@@ -164,6 +156,12 @@ class RATransformer:
         elif isinstance(self.model, BartPretrainedModel):
             return 'encoder' in module_name and isinstance(module, BartAttention)
 
+        elif isinstance(self.model, RobertaPreTrainedModel):
+            return 'encoder' in module_name and isinstance(module, RobertaSelfAttention)
+
+        elif isinstance(self.model, GPT2PreTrainedModel):
+            return isinstance(module, GPT2Attention)
+
         else:
             raise NotImplementedError(f"Could not find implementation for the model: '{model_name}'")
 
@@ -179,6 +177,15 @@ class RATransformer:
         elif type(attention_layer) == BertSelfAttention:
             attention_layer.forward = MethodType(BertRelationalSelfAttention.forward, attention_layer)
             relational_embedding_dim = attention_layer.attention_head_size
+
+        elif type(attention_layer) == RobertaSelfAttention:
+            attention_layer.forward = MethodType(RobertaRelationalSelfAttention.forward, attention_layer)
+            relational_embedding_dim = attention_layer.attention_head_size
+
+        elif type(attention_layer) == GPT2Attention:
+            attention_layer.forward = MethodType(GPT2RelationalAttention.forward, attention_layer)
+            attention_layer._attn = MethodType(GPT2RelationalAttention._attn, attention_layer)
+            relational_embedding_dim = attention_layer.head_dim
 
         else:
             raise NotImplementedError(f"Could not find implementation for the module: '{attention_layer}'")
