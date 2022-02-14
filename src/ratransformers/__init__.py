@@ -48,8 +48,7 @@ class RATransformer:
 
         # change attention layers with relational ones
         for module_name, module in self.model.named_modules():
-            if self._change_this_module(module_name=module_name, module=module,
-                                        model_name=pretrained_model_name_or_path):
+            if self._change_this_module(module_name=module_name, module=module):
                 self._change_attention_layer(attention_layer=module, num_relation_kinds=len(relation_kinds))
 
         # reload model weights if they exist
@@ -145,7 +144,7 @@ class RATransformer:
 
         return self.input_relation_kinds[0]
 
-    def _change_this_module(self, module_name: str, module: nn.Module, model_name: str) -> bool:
+    def _change_this_module(self, module_name: str, module: nn.Module) -> bool:
 
         if isinstance(self.model, T5PreTrainedModel):
             return 'encoder' in module_name and isinstance(module, T5Attention)
@@ -163,7 +162,8 @@ class RATransformer:
             return isinstance(module, GPT2Attention)
 
         else:
-            raise NotImplementedError(f"Could not find implementation for the model: '{model_name}'")
+            raise NotImplementedError(f"Could not find implementation for the model type: '{type(self.model)}'. "
+                                      f"Feel free to open an issue in GitHub to ask for its addition!")
 
     def _change_attention_layer(self, attention_layer: nn.Module, num_relation_kinds: int, use_same_relation_kv_emb: bool = True) -> None:
         if type(attention_layer) == T5Attention:
