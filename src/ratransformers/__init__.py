@@ -1,10 +1,8 @@
 __version__ = '0.0.0'
 
-import contextlib
-
 from transformers import AutoTokenizer, AutoModel, AutoModelForSeq2SeqLM, \
     PreTrainedTokenizer, BatchEncoding, BartForSequenceClassification, BartTokenizerFast, \
-    AutoModelForTokenClassification
+    AutoModelForTokenClassification, BertPreTrainedModel, BartPretrainedModel, T5PreTrainedModel
 from typing import Any, Dict, Optional, List, Tuple, Type
 from types import MethodType
 import torch.nn as nn
@@ -14,6 +12,7 @@ from ratransformers.bert import BertRelationalSelfAttention, BertSelfAttention
 import torch
 import functools
 import numpy as np
+import os
 
 
 class RATransformer:
@@ -47,7 +46,8 @@ class RATransformer:
         self.tokenizer = tokenizer_cls.from_pretrained(pretrained_model_name_or_path=pretrained_tokenizer_name_or_path)
 
         from transformers.modeling_utils import logger
-        logger.disabled = True # disable logger
+        has_pretrained_rat_model = os.path.isfile(f'{pretrained_model_name_or_path}/pytorch_model.bin')
+        logger.disabled = has_pretrained_rat_model # disable logger, if hsa pretrained rat model
         self.model = model_cls.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path)
         logger.disabled = False # enable logger
 
@@ -57,14 +57,15 @@ class RATransformer:
         # change attention layers with relational ones
         for module_name, module in self.model.named_modules():
             if self._change_this_module(module_name=module_name, module=module,
-                                        model_name=alias_model_name or pretrained_model_name_or_path):
+                                        model_name=pretrained_model_name_or_path):
                 self._change_attention_layer(attention_layer=module, num_relation_kinds=len(relation_kinds))
 
-        # reload model weights
-        state_dict = torch.load('ra-tscholak/1zha5ono/pytorch_model.bin', map_location="cpu")
-        self.model, _, _, _ = self.model._load_state_dict_into_model(
-            self.model, state_dict, 'ra-tscholak/1zha5ono', _fast_init=True
-        )
+        # reload model weights if they exist
+        if has_pretrained_rat_model:
+            state_dict = torch.load(f'{pretrained_model_name_or_path}/pytorch_model.bin', map_location="cpu")
+            self.model, _, _, _ = self.model._load_state_dict_into_model(
+                self.model, state_dict, pretrained_model_name_or_path, _fast_init=True
+            )
 
         def model_prefix_function(function):
             @functools.wraps(function)
@@ -154,13 +155,13 @@ class RATransformer:
 
     def _change_this_module(self, module_name: str, module: nn.Module, model_name: str) -> bool:
 
-        if model_name.startswith('t5'):
+        if isinstance(self.model, T5PreTrainedModel):
             return 'encoder' in module_name and isinstance(module, T5Attention)
 
-        if model_name.startswith('bert'):
+        elif isinstance(self.model, BertPreTrainedModel):
             return 'encoder' in module_name and isinstance(module, BertSelfAttention)
 
-        elif model_name == "nielsr/tapex-large-finetuned-tabfact" or model_name.startswith('bart'):
+        elif isinstance(self.model, BartPretrainedModel):
             return 'encoder' in module_name and isinstance(module, BartAttention)
 
         else:
