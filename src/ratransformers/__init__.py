@@ -48,8 +48,7 @@ class RATransformer:
 
         # change attention layers with relational ones
         for module_name, module in self.model.named_modules():
-            if self._change_this_module(module_name=module_name, module=module):
-                self._change_attention_layer(attention_layer=module, num_relation_kinds=len(relation_kinds))
+            self._change_this_module(module_name=module_name, module=module, num_relation_kinds=len(relation_kinds))
 
         # reload model weights if they exist
         if has_pretrained_rat_model:
@@ -144,56 +143,46 @@ class RATransformer:
 
         return self.input_relation_kinds[0]
 
-    def _change_this_module(self, module_name: str, module: nn.Module) -> bool:
+    def _change_this_module(self, module_name: str, module: nn.Module, num_relation_kinds: int, use_same_relation_kv_emb: bool = True) -> None:
 
+        relational_embedding_dim = None
         if isinstance(self.model, T5PreTrainedModel):
-            return 'encoder' in module_name and isinstance(module, T5Attention)
+            if 'encoder' in module_name and isinstance(module, T5Attention):
+                module.forward = MethodType(T5RelationalAttention.forward, module)
+                relational_embedding_dim = module.inner_dim // module.n_heads
 
         elif isinstance(self.model, BertPreTrainedModel):
-            return 'encoder' in module_name and isinstance(module, BertSelfAttention)
+            if 'encoder' in module_name and isinstance(module, BertSelfAttention):
+                module.forward = MethodType(BertRelationalSelfAttention.forward, module)
+                relational_embedding_dim = module.attention_head_size
 
         elif isinstance(self.model, BartPretrainedModel):
-            return 'encoder' in module_name and isinstance(module, BartAttention)
+            if 'encoder' in module_name and isinstance(module, BartAttention):
+                module.forward = MethodType(BartRelationalAttention.forward, module)
+                relational_embedding_dim = module.head_dim
 
         elif isinstance(self.model, RobertaPreTrainedModel):
-            return 'encoder' in module_name and isinstance(module, RobertaSelfAttention)
+            if 'encoder' in module_name and isinstance(module, RobertaSelfAttention):
+                module.forward = MethodType(RobertaRelationalSelfAttention.forward, module)
+                relational_embedding_dim = module.attention_head_size
 
         elif isinstance(self.model, GPT2PreTrainedModel):
-            return isinstance(module, GPT2Attention)
+            if isinstance(module, GPT2Attention):
+                module.forward = MethodType(GPT2RelationalAttention.forward, module)
+                module._attn = MethodType(GPT2RelationalAttention._attn, module)
+                relational_embedding_dim = module.head_dim
 
         else:
             raise NotImplementedError(f"Could not find implementation for the model type: '{type(self.model)}'. "
                                       f"Feel free to open an issue in GitHub to ask for its addition!")
 
-    def _change_attention_layer(self, attention_layer: nn.Module, num_relation_kinds: int, use_same_relation_kv_emb: bool = True) -> None:
-        if type(attention_layer) == T5Attention:
-            attention_layer.forward = MethodType(T5RelationalAttention.forward, attention_layer)
-            relational_embedding_dim = attention_layer.inner_dim // attention_layer.n_heads
+        if relational_embedding_dim is None:
+            return
 
-        elif type(attention_layer) == BartAttention:
-            attention_layer.forward = MethodType(BartRelationalAttention.forward, attention_layer)
-            relational_embedding_dim = attention_layer.head_dim
-
-        elif type(attention_layer) == BertSelfAttention:
-            attention_layer.forward = MethodType(BertRelationalSelfAttention.forward, attention_layer)
-            relational_embedding_dim = attention_layer.attention_head_size
-
-        elif type(attention_layer) == RobertaSelfAttention:
-            attention_layer.forward = MethodType(RobertaRelationalSelfAttention.forward, attention_layer)
-            relational_embedding_dim = attention_layer.attention_head_size
-
-        elif type(attention_layer) == GPT2Attention:
-            attention_layer.forward = MethodType(GPT2RelationalAttention.forward, attention_layer)
-            attention_layer._attn = MethodType(GPT2RelationalAttention._attn, attention_layer)
-            relational_embedding_dim = attention_layer.head_dim
-
-        else:
-            raise NotImplementedError(f"Could not find implementation for the module: '{attention_layer}'")
-
-        attention_layer.num_relation_kinds = num_relation_kinds
-        attention_layer.relation_k_emb = nn.Embedding(num_relation_kinds + 1, relational_embedding_dim, padding_idx=0)
+        module.num_relation_kinds = num_relation_kinds
+        module.relation_k_emb = nn.Embedding(num_relation_kinds + 1, relational_embedding_dim, padding_idx=0)
         if use_same_relation_kv_emb:
-            attention_layer.relation_v_emb = attention_layer.relation_k_emb
+            module.relation_v_emb = module.relation_k_emb
         else:
-            attention_layer.relation_v_emb = nn.Embedding(num_relation_kinds + 1, relational_embedding_dim, padding_idx=0)
-        attention_layer.input_relation_kinds = self.input_relation_kinds # will hold (batch, seq_length, seq_length, num_relation_kinds)
+            module.relation_v_emb = nn.Embedding(num_relation_kinds + 1, relational_embedding_dim, padding_idx=0)
+        module.input_relation_kinds = self.input_relation_kinds # will hold (batch, seq_length, seq_length, num_relation_kinds)
