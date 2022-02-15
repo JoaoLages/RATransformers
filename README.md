@@ -15,7 +15,7 @@ that enables the training/fine-tuning of models with extra relation-aware input 
 
 In this example we can see that passing the table as text with no additional information to the model is a poor representation.
 
-With RATransformers 🐭 you are to able to encode the table in a more structured way by passing specific relations within the input.
+With RATransformers 🐭 you are able to encode the table in a more structured way by passing specific relations within the input.
 RATransformers 🐭 also allows you to pass further features related with each input word/token.
 
 Check more examples in [[here](https://github.com/JoaoLages/RATransformers/blob/main/notebooks/)].
