@@ -8,7 +8,7 @@
 that enables the training/fine-tuning of models with extra relation-aware input features.
 </div>
 
-## Example - Encoding a table in TableQA (Question Answering on Tabular Data)
+### Example - Encoding a table in TableQA (Question Answering on Tabular Data)
 ![](assets/tableQA.gif)
 
 [[Notebook Link](https://github.com/JoaoLages/RATransformers/blob/main/notebooks/TableQA_tabfact_example.ipynb)]
@@ -34,4 +34,4 @@ Currently we support a limited number of transformer models:
 - [RoBERTa](https://huggingface.co/docs/transformers/model_doc/roberta)
 - [T5](https://huggingface.co/docs/transformers/model_doc/t5)
 
-Want to another model? Feel free to open an [Issue](https://github.com/JoaoLages/RATransformers/issues) or create a [Pull Request](https://github.com/JoaoLages/RATransformers/pulls) and let's get started 🚀
+Want another model? Feel free to open an [Issue](https://github.com/JoaoLages/RATransformers/issues) or create a [Pull Request](https://github.com/JoaoLages/RATransformers/pulls) and let's get started 🚀
