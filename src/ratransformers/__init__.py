@@ -1,14 +1,16 @@
 __version__ = '0.0.0'
 
-from transformers import AutoTokenizer, AutoModel, AutoModelForSeq2SeqLM, \
-    PreTrainedTokenizer, BatchEncoding, BartForSequenceClassification, BartTokenizerFast, \
-    AutoModelForTokenClassification, BertPreTrainedModel, BartPretrainedModel, T5PreTrainedModel
-from typing import Any, Dict, Optional, List, Tuple, Type
+from transformers import AutoTokenizer, AutoModel, BertPreTrainedModel, BartPretrainedModel, T5PreTrainedModel, \
+     PreTrainedTokenizer, BatchEncoding, GPT2PreTrainedModel, PreTrainedModel
+from transformers.models.roberta.modeling_roberta import RobertaPreTrainedModel
+from typing import Dict, Optional, List, Tuple, Type
 from types import MethodType
 import torch.nn as nn
 from ratransformers.t5 import T5RelationalAttention, T5Attention
 from ratransformers.bart import BartRelationalAttention, BartAttention
 from ratransformers.bert import BertRelationalSelfAttention, BertSelfAttention
+from ratransformers.roberta import RobertaRelationalSelfAttention, RobertaSelfAttention
+from ratransformers.gpt2 import GPT2RelationalAttention, GPT2Attention
 import torch
 import functools
 import numpy as np
@@ -18,31 +20,21 @@ import os
 class RATransformer:
 
     def __init__(self, pretrained_model_name_or_path: str, relation_kinds: List[str],
-                 alias_model_name: Optional[str] = '', tokenizer_cls: Optional[Type[PreTrainedTokenizer]] = None,
-                 model_cls: Optional[Type[PreTrainedTokenizer]] = None):
+                 tokenizer_cls: Type[PreTrainedTokenizer] = AutoTokenizer,
+                 model_cls: Type[PreTrainedModel] = AutoModel,
+                 pretrained_tokenizer_name_or_path: Optional[str] = None):
+        """
+        Returns an initialized and ready to test/train RATransformer
+        Args:
+            pretrained_model_name_or_path: model name or path to pass directly to Huggingface's `model_cls` class
+            relation_kinds: list with all the possible relation kinds that can exist within the input
+            tokenizer_cls: pass your own AutoTokenizer class to initialize the tokenizer
+            model_cls: pass your own AutoModel class to initialize the model
+            pretrained_tokenizer_name_or_path: Optional. Tokenizer name or path to pass directly
+                to Huggingface's `tokenizer_cls` class. By default, will be equal to pretrained_model_name_or_path
+        """
 
-        pretrained_tokenizer_name_or_path = pretrained_model_name_or_path
-        if tokenizer_cls is None:
-            if pretrained_model_name_or_path == "nielsr/tapex-large-finetuned-tabfact":
-                tokenizer_cls = BartTokenizerFast
-                pretrained_tokenizer_name_or_path = 'facebook/bart-large'
-
-            else:
-                tokenizer_cls = AutoTokenizer
-
-        if model_cls is None:
-            if (alias_model_name or pretrained_model_name_or_path).startswith('t5'):
-                model_cls = AutoModelForSeq2SeqLM
-
-            elif pretrained_model_name_or_path == "nielsr/tapex-large-finetuned-tabfact":
-                model_cls = BartForSequenceClassification
-
-            elif pretrained_model_name_or_path == "dslim/bert-base-NER":
-                model_cls = AutoModelForTokenClassification
-
-            else:
-                model_cls = AutoModel
-
+        pretrained_tokenizer_name_or_path = pretrained_tokenizer_name_or_path or pretrained_model_name_or_path
         self.tokenizer = tokenizer_cls.from_pretrained(pretrained_model_name_or_path=pretrained_tokenizer_name_or_path)
 
         from transformers.modeling_utils import logger
@@ -56,9 +48,7 @@ class RATransformer:
 
         # change attention layers with relational ones
         for module_name, module in self.model.named_modules():
-            if self._change_this_module(module_name=module_name, module=module,
-                                        model_name=pretrained_model_name_or_path):
-                self._change_attention_layer(attention_layer=module, num_relation_kinds=len(relation_kinds))
+            self._change_this_module(module_name=module_name, module=module, num_relation_kinds=len(relation_kinds))
 
         # reload model weights if they exist
         if has_pretrained_rat_model:
@@ -153,40 +143,46 @@ class RATransformer:
 
         return self.input_relation_kinds[0]
 
-    def _change_this_module(self, module_name: str, module: nn.Module, model_name: str) -> bool:
+    def _change_this_module(self, module_name: str, module: nn.Module, num_relation_kinds: int, use_same_relation_kv_emb: bool = True) -> None:
 
+        relational_embedding_dim = None
         if isinstance(self.model, T5PreTrainedModel):
-            return 'encoder' in module_name and isinstance(module, T5Attention)
+            if 'encoder' in module_name and 'decoder' not in module_name and isinstance(module, T5Attention):
+                module.forward = MethodType(T5RelationalAttention.forward, module)
+                relational_embedding_dim = module.inner_dim // module.n_heads
 
         elif isinstance(self.model, BertPreTrainedModel):
-            return 'encoder' in module_name and isinstance(module, BertSelfAttention)
+            if 'encoder' in module_name and 'decoder' not in module_name and isinstance(module, BertSelfAttention):
+                module.forward = MethodType(BertRelationalSelfAttention.forward, module)
+                relational_embedding_dim = module.attention_head_size
 
         elif isinstance(self.model, BartPretrainedModel):
-            return 'encoder' in module_name and isinstance(module, BartAttention)
+            if 'encoder' in module_name and 'decoder' not in module_name and isinstance(module, BartAttention):
+                module.forward = MethodType(BartRelationalAttention.forward, module)
+                relational_embedding_dim = module.head_dim
+
+        elif isinstance(self.model, RobertaPreTrainedModel):
+            if 'encoder' in module_name and 'decoder' not in module_name and isinstance(module, RobertaSelfAttention):
+                module.forward = MethodType(RobertaRelationalSelfAttention.forward, module)
+                relational_embedding_dim = module.attention_head_size
+
+        elif isinstance(self.model, GPT2PreTrainedModel):
+            if isinstance(module, GPT2Attention):
+                module.forward = MethodType(GPT2RelationalAttention.forward, module)
+                module._attn = MethodType(GPT2RelationalAttention._attn, module)
+                relational_embedding_dim = module.head_dim
 
         else:
-            raise NotImplementedError(f"Could not find implementation for the model: '{model_name}'")
+            raise NotImplementedError(f"Could not find implementation for the model type: '{type(self.model)}'. "
+                                      f"Feel free to open an issue in GitHub to ask for its addition!")
 
-    def _change_attention_layer(self, attention_layer: nn.Module, num_relation_kinds: int, use_same_relation_kv_emb: bool = True) -> None:
-        if type(attention_layer) == T5Attention:
-            attention_layer.forward = MethodType(T5RelationalAttention.forward, attention_layer)
-            relational_embedding_dim = attention_layer.inner_dim // attention_layer.n_heads
+        if relational_embedding_dim is None:
+            return
 
-        elif type(attention_layer) == BartAttention:
-            attention_layer.forward = MethodType(BartRelationalAttention.forward, attention_layer)
-            relational_embedding_dim = attention_layer.head_dim
-
-        elif type(attention_layer) == BertSelfAttention:
-            attention_layer.forward = MethodType(BertRelationalSelfAttention.forward, attention_layer)
-            relational_embedding_dim = attention_layer.attention_head_size
-
-        else:
-            raise NotImplementedError(f"Could not find implementation for the module: '{attention_layer}'")
-
-        attention_layer.num_relation_kinds = num_relation_kinds
-        attention_layer.relation_k_emb = nn.Embedding(num_relation_kinds + 1, relational_embedding_dim, padding_idx=0)
+        module.num_relation_kinds = num_relation_kinds
+        module.relation_k_emb = nn.Embedding(num_relation_kinds + 1, relational_embedding_dim, padding_idx=0)
         if use_same_relation_kv_emb:
-            attention_layer.relation_v_emb = attention_layer.relation_k_emb
+            module.relation_v_emb = module.relation_k_emb
         else:
-            attention_layer.relation_v_emb = nn.Embedding(num_relation_kinds + 1, relational_embedding_dim, padding_idx=0)
-        attention_layer.input_relation_kinds = self.input_relation_kinds # will hold (batch, seq_length, seq_length, num_relation_kinds)
+            module.relation_v_emb = nn.Embedding(num_relation_kinds + 1, relational_embedding_dim, padding_idx=0)
+        module.input_relation_kinds = self.input_relation_kinds # will hold (batch, seq_length, seq_length, num_relation_kinds)

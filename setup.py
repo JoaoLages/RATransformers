@@ -28,7 +28,7 @@ setup(
         'Topic :: Utilities',
 
         # Pick your license as you wish
-        # 'License :: OSI Approved :: MIT License',
+        'License :: OSI Approved :: MIT License',
 
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
