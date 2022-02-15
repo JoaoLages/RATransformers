@@ -7,8 +7,6 @@ here = pathlib.Path(__file__).parent.resolve()
 # Get the long description from the README file
 long_description = (here / 'README.md').read_text(encoding='utf-8')
 
-with open('requirements.txt') as f:
-    install_requires = f.read().splitlines()
 
 # Arguments marked as "Required" below must be included for upload to PyPI.
 # Fields marked as "Optional" may be commented out.
@@ -40,7 +38,14 @@ setup(
         'Programming Language :: Python :: 3.9',
     ],
     packages=find_packages(where='src'),
-    install_requires=install_requires,
+    install_requires=[
+        "transformers ~= 4.6",
+        "numpy ~= 1.19",
+        "PyYAML~=5.4"
+    ],
     package_dir={'': 'src'},
-    python_requires='>=3.6, <4'
+    python_requires='>=3.6, <4',
+    dependency_links=[
+        "https://download.pytorch.org/whl/torch_stable.html"
+    ]
 )
