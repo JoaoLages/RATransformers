@@ -48,6 +48,8 @@ With only these steps your RATransformer 🐭 is ready to be trained.
 
 More implementation details in [[the examples here](https://github.com/JoaoLages/RATransformers/blob/main/notebooks/)].
 
+## How does it work?
+We modify the self-attention layers of the transformer model as explained in the section 3 of [the RAT-SQL paper](https://arxiv.org/pdf/1911.04942.pdf).
 
 ## Supported Models
 Currently we support a limited number of transformer models:
