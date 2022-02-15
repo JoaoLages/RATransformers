@@ -147,22 +147,22 @@ class RATransformer:
 
         relational_embedding_dim = None
         if isinstance(self.model, T5PreTrainedModel):
-            if 'encoder' in module_name and isinstance(module, T5Attention):
+            if 'encoder' in module_name and 'decoder' not in module_name and isinstance(module, T5Attention):
                 module.forward = MethodType(T5RelationalAttention.forward, module)
                 relational_embedding_dim = module.inner_dim // module.n_heads
 
         elif isinstance(self.model, BertPreTrainedModel):
-            if 'encoder' in module_name and isinstance(module, BertSelfAttention):
+            if 'encoder' in module_name and 'decoder' not in module_name and isinstance(module, BertSelfAttention):
                 module.forward = MethodType(BertRelationalSelfAttention.forward, module)
                 relational_embedding_dim = module.attention_head_size
 
         elif isinstance(self.model, BartPretrainedModel):
-            if 'encoder' in module_name and isinstance(module, BartAttention):
+            if 'encoder' in module_name and 'decoder' not in module_name and isinstance(module, BartAttention):
                 module.forward = MethodType(BartRelationalAttention.forward, module)
                 relational_embedding_dim = module.head_dim
 
         elif isinstance(self.model, RobertaPreTrainedModel):
-            if 'encoder' in module_name and isinstance(module, RobertaSelfAttention):
+            if 'encoder' in module_name and 'decoder' not in module_name and isinstance(module, RobertaSelfAttention):
                 module.forward = MethodType(RobertaRelationalSelfAttention.forward, module)
                 relational_embedding_dim = module.attention_head_size
 
