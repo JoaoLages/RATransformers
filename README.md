@@ -1,7 +1,8 @@
 <div align="center">
+  
 # RATransformers 🐭
-[![PyPI - Latest Package Version](https://img.shields.io/pypi/v/ratransformers?logo=pypi&style=flat&color=orange)][#pypi-package]
-[![GitHub - License](https://img.shields.io/github/license/JoaoLages/ratransformers?logo=github&style=flat&color=green)][#github-license]
+
+![PyPI - Latest Package Version](https://img.shields.io/pypi/v/ratransformers?logo=pypi&style=flat&color=orange) ![GitHub - License](https://img.shields.io/github/license/JoaoLages/ratransformers?logo=github&style=flat&color=green)
 
 ![created by @JoaoLages](https://img.shields.io/badge/Created%20By-@JoaoLages-crimson?style=flat-square)
   
