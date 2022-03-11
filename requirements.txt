@@ -1,5 +1,5 @@
-numpy~=1.19.1
-transformers~=4.6.1
-setuptools~=49.6.0
-pytest~=7.0.1
-torch~=1.9.1
+numpy>=1.19.1
+transformers>=4.6.1
+setuptools>=49.6.0
+pytest>=7.0.1
+torch>=1.9.1
