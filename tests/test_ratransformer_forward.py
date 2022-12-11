@@ -25,34 +25,6 @@ class TestModelsForward:
             encoding['decoder_input_ids'] = decoder_input_ids
         _ = model(**encoding)
 
-    def test_bert(self):
-        ratransformer = RATransformer(
-            "prajjwal1/bert-tiny",
-            relation_kinds=['dummy1', 'dummy2']
-        )
-        self.ratransformer_forward(ratransformer)
-
-    def test_gpt2(self):
-        ratransformer = RATransformer(
-            "distilgpt2",
-            relation_kinds=['dummy1', 'dummy2']
-        )
-        self.ratransformer_forward(ratransformer)
-
-    def test_roberta(self):
-        ratransformer = RATransformer(
-            "distilroberta-base",
-            relation_kinds=['dummy1', 'dummy2']
-        )
-        self.ratransformer_forward(ratransformer)
-
-    def test_bart(self):
-        ratransformer = RATransformer(
-            "sshleifer/tinier_bart",
-            relation_kinds=['dummy1', 'dummy2']
-        )
-        self.ratransformer_forward(ratransformer)
-
     def test_t5(self):
         ratransformer = RATransformer(
             "t5-small",
