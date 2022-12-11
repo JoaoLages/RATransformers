@@ -10,7 +10,7 @@ with open('requirements.txt', encoding='utf-8') as f:
 
 setup(
     name='ratransformers',
-    version='0.1.1',
+    version='1.0.0',
     description='RATransformer - make a transformer model learn implicit relations passed in the input',
     long_description=long_description,
     long_description_content_type='text/markdown',

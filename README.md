@@ -29,14 +29,13 @@ Install directly from PyPI:
 ## Usage
 
 ```python
-import ratransformers
-from transformers import BartTokenizerFast, BartForSequenceClassification
+from ratransformers import RATransformer
+from transformers import BartForSequenceClassification
 
 
-ratransformer = ratransformers.RATransformer(
+ratransformer = RATransformer(
     "nielsr/tapex-large-finetuned-tabfact", # define the 🤗 model you want to load
     relation_kinds=['is_value_of_column', 'is_from_same_row'], # define the relations that you want to model in the input
-    tokenizer_cls=BartTokenizerFast, # define the tokenizer class 
     model_cls=BartForSequenceClassification, # define the model class
     pretrained_tokenizer_name_or_path='facebook/bart-large' # define the tokenizer you want to load (in case it is not the same as the model)
 )
@@ -46,7 +45,7 @@ tokenizer = ratransformer.tokenizer
 
 With only these steps your RATransformer 🐭 is ready to be trained. 
 
-More implementation details in [[the examples here](https://github.com/JoaoLages/RATransformers/blob/main/notebooks/)].
+More implementation details in [the examples here](https://github.com/JoaoLages/RATransformers/blob/main/notebooks/).
 
 ## How does it work?
 We modify the self-attention layers of the transformer model as explained in the section 3 of [the RAT-SQL paper](https://arxiv.org/pdf/1911.04942.pdf).
@@ -58,5 +57,6 @@ Currently we support a limited number of transformer models:
 - [GPT-2](https://huggingface.co/docs/transformers/model_doc/gpt2)
 - [RoBERTa](https://huggingface.co/docs/transformers/model_doc/roberta)
 - [T5](https://huggingface.co/docs/transformers/model_doc/t5)
+- [LongT5](https://huggingface.co/docs/transformers/model_doc/longt5)
 
 Want another model? Feel free to open an [Issue](https://github.com/JoaoLages/RATransformers/issues) or create a [Pull Request](https://github.com/JoaoLages/RATransformers/pulls) and let's get started 🚀
