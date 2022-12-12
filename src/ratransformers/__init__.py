@@ -1,4 +1,4 @@
-__version__ = '1.0.0'
+__version__ = '1.1.0'
 
 from transformers import AutoTokenizer, AutoModel, BertPreTrainedModel, BartPretrainedModel, T5PreTrainedModel, \
     PreTrainedTokenizer, BatchEncoding, GPT2PreTrainedModel, PreTrainedModel, LongT5PreTrainedModel
@@ -56,7 +56,7 @@ class RATransformer:
     def __init__(self, pretrained_model_name_or_path: str, relation_kinds: List[str],
                  tokenizer_cls: Type[PreTrainedTokenizer] = AutoTokenizer,
                  model_cls: Type[PreTrainedModel] = AutoModel,
-                 pretrained_tokenizer_name_or_path: Optional[str] = None):
+                 pretrained_tokenizer_name_or_path: Optional[str] = None, **model_kwargs):
         """
         Returns an initialized and ready to test/train RATransformer
         Args:
@@ -66,6 +66,7 @@ class RATransformer:
             model_cls: pass your own AutoModel class to initialize the model
             pretrained_tokenizer_name_or_path: Optional. Tokenizer name or path to pass directly
                 to Huggingface's `tokenizer_cls` class. By default, will be equal to pretrained_model_name_or_path
+            model_kwargs: other arguments to be passed to model_cls.from_pretrained method
         """
 
         pretrained_tokenizer_name_or_path = pretrained_tokenizer_name_or_path or pretrained_model_name_or_path
@@ -94,7 +95,9 @@ class RATransformer:
                 model_cls._load_pretrained_model
             )
 
-        self.model = model_cls.from_pretrained(pretrained_model_name_or_path=pretrained_model_name_or_path)
+        self.model = model_cls.from_pretrained(
+            pretrained_model_name_or_path=pretrained_model_name_or_path, **model_kwargs
+        )
 
         self.relational_kind_to_index = {t: i + 1 for i, t in enumerate(relation_kinds)}
 
