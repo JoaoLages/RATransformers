@@ -790,7 +790,7 @@ class RelationalLongT5Attention(LongT5Attention):
         # past_key_value[0] is (batch_size, n_heads, q_len - 1, dim_per_head)
         batch_size, seq_length = hidden_states.shape[:2]
 
-        assert input_relations is not None
+        assert input_relations is not None, "Using RATransformer but no 'input_relations' were passed to the model"
         assert input_relations.shape == (batch_size, seq_length, seq_length)
 
         # (batch_size, seq_length, seq_length, self.num_relation_kinds, self.inner_dim // num_relation_kinds)
@@ -933,7 +933,7 @@ class RelationalLongT5LocalAttention(LongT5LocalAttention):
     ):
         batch_size, seq_length = hidden_states.shape[:2]
 
-        assert input_relations is not None
+        assert input_relations is not None, "Using RATransformer but no 'input_relations' were passed to the model"
         assert input_relations.shape == (batch_size, seq_length, seq_length)
 
         # (batch_size, seq_length, seq_length, dim_per_head)
@@ -1072,7 +1072,7 @@ class RelationalLongT5TransientGlobalAttention(LongT5TransientGlobalAttention):
     ):
         batch_size, seq_length = hidden_states.shape[:2]
 
-        assert input_relations is not None
+        assert input_relations is not None, "Using RATransformer but no 'input_relations' were passed to the model"
         assert input_relations.shape == (batch_size, seq_length, seq_length)
 
         # (batch_size, seq_length, seq_length, dim_per_head)
