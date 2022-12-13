@@ -60,7 +60,7 @@ def _change_this_module(model: PreTrainedModel, module_name: str, module: nn.Mod
 
 
 def _get_model_class_from_auto_class(cls, pretrained_model_name_or_path, **kwargs):
-    if not isinstance(cls, _BaseAutoModelClass):
+    if not cls.__name__.startswith('AutoModel'):
         return cls
 
     config = kwargs.pop("config", None)
