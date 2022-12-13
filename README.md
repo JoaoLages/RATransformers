@@ -30,13 +30,13 @@ Install directly from PyPI:
 
 ```python
 from ratransformers import RATransformer
-from transformers import BartForSequenceClassification
+from transformers import AutoModelForSequenceClassification
 
 
 ratransformer = RATransformer(
     "nielsr/tapex-large-finetuned-tabfact", # define the 🤗 model you want to load
     relation_kinds=['is_value_of_column', 'is_from_same_row'], # define the relations that you want to model in the input
-    model_cls=BartForSequenceClassification, # define the model class
+    model_cls=AutoModelForSequenceClassification, # define the model class
     pretrained_tokenizer_name_or_path='facebook/bart-large' # define the tokenizer you want to load (in case it is not the same as the model)
 )
 model = ratransformer.model

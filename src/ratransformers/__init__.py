@@ -116,16 +116,17 @@ def _get_model_class_from_auto_class(cls, pretrained_model_name_or_path, **kwarg
 
 class RATransformer:
 
-    def __init__(self, relation_kinds: List[str],
-                 pretrained_model_name_or_path: Optional[str] = None,
+    def __init__(self,
+                 pretrained_model_name_or_path: Optional[str],
+                 relation_kinds: List[str],
                  tokenizer_cls: Type[PreTrainedTokenizer] = AutoTokenizer,
                  model_cls: Type[PreTrainedModel] = AutoModel,
                  pretrained_tokenizer_name_or_path: Optional[str] = None, **kwargs):
         """
         Returns an initialized and ready to test/train RATransformer
         Args:
-            relation_kinds: list with all the possible relation kinds that can exist within the input
             pretrained_model_name_or_path: model name or path to pass directly to Huggingface's `model_cls` class
+            relation_kinds: list with all the possible relation kinds that can exist within the input
             tokenizer_cls: pass your own AutoTokenizer class to initialize the tokenizer
             model_cls: pass your own AutoModel class to initialize the model
             pretrained_tokenizer_name_or_path: Optional. Tokenizer name or path to pass directly
