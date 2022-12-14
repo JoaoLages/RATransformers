@@ -1,4 +1,4 @@
-__version__ = '1.3.0'
+__version__ = '1.3.1'
 
 import inspect
 
@@ -135,9 +135,9 @@ class RATransformer:
         """
 
         model_cls_args = set(inspect.getfullargspec(model_cls.from_pretrained)[0])
-        model_kwargs = {k:v for k, v in kwargs if k in model_cls_args}
+        model_kwargs = {k:v for k, v in kwargs.items() if k in model_cls_args}
         tokenizer_args = set(inspect.getfullargspec(tokenizer_cls.from_pretrained)[0])
-        tokenizer_kwargs = {k:v for k, v in kwargs if k in tokenizer_args}
+        tokenizer_kwargs = {k:v for k, v in kwargs.items() if k in tokenizer_args}
 
         self.relational_kind_to_index = {t: i + 1 for i, t in enumerate(relation_kinds)}
 
