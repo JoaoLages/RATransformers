@@ -977,7 +977,7 @@ class RelationalLongT5LocalAttention(LongT5LocalAttention):
                     new_relation_embeds[-1] = _pad_to_multiple(
                         new_relation_embeds[-1], self.block_len, dim=3, pad_value=0
                     )
-            return torch.concatenate(new_relation_embeds)
+            return torch.cat(new_relation_embeds, dim=1)
         relation_k_embeds = get_new_relation_embeds(relation_k_embeds)
         relation_v_embeds = get_new_relation_embeds(relation_v_embeds)
 
@@ -1131,7 +1131,7 @@ class RelationalLongT5TransientGlobalAttention(LongT5TransientGlobalAttention):
                     new_relation_embeds[-1] = _pad_to_multiple(
                         new_relation_embeds[-1], self.block_len, dim=3, pad_value=0
                     )
-            return torch.concatenate(new_relation_embeds)
+            return torch.cat(new_relation_embeds, dim=1)
         relation_k_embeds = get_new_relation_embeds(relation_k_embeds)
         relation_v_embeds = get_new_relation_embeds(relation_v_embeds)
 
@@ -1156,10 +1156,14 @@ class RelationalLongT5TransientGlobalAttention(LongT5TransientGlobalAttention):
         value_states = torch.cat([value_states, side_value_states], dim=2)
 
         # Add zeros to relation_k_embeds and relation_v_embeds
-        # New shape: (batch_size, num_blocks, 3 * block_len + global_seq_len, n_heads, dim_per_head)
+        # New shape: (batch_size, num_blocks, 3 * block_len + global_seq_len, block_len, dim_per_head)
         zeros_shape_to_add = list(relation_k_embeds.shape[:2]) + [side_value_states.shape[2]] + list(relation_k_embeds.shape[3:])
-        relation_k_embeds = torch.cat([relation_k_embeds, torch.zeros(zeros_shape_to_add)], dim=2)
-        relation_v_embeds = torch.cat([relation_v_embeds, torch.zeros(zeros_shape_to_add)], dim=2)
+        relation_k_embeds = torch.cat(
+            [relation_k_embeds, torch.zeros(zeros_shape_to_add, device=relation_k_embeds.device)], dim=2
+        )
+        relation_v_embeds = torch.cat(
+            [relation_v_embeds, torch.zeros(zeros_shape_to_add, device=relation_v_embeds.device)], dim=2
+        )
 
         # Compute scores -> (batch_size, num_block, n_heads, block_len, 3 * block_len + global_seq_len)
         scores = torch.einsum("...qhd,...khd->...hqk", query_states, key_states)
